@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador de Documentos por Carpetas</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Librerías para procesar archivos en el navegador -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.18/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+</head>
+
+<body>
+
+    <main class="card">
+        <button class="help-btn" id="openHelpBtn" aria-label="Mostrar ayuda" data-tooltip="Estructura de carpetas requerida">?</button>
+
+        <header>
+            <h1>Análisis Comparativo de Documentos</h1>
+            <p>Selecciona una carpeta y descubre la frecuencia y distribución de palabras clave por materia.</p>
+        </header>
+
+        <!-- Input para seleccionar carpeta -->
+        <div id="drop-zone">
+            <input type="file" id="file-input" webkitdirectory directory multiple hidden>
+            <label for="file-input" id="file-label">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                        d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z">
+                    </path>
+                </svg>
+                <span id="file-name-display"><strong>Haz clic para seleccionar una carpeta</strong></span>
+                <span id="folder-info" class="subtle-text"></span>
+            </label>
+        </div>
+
+        <!-- Entrada de palabras clave -->
+       <div class="input-group">
+            <label for="keywords-input-field">Palabras a buscar</label>
+            <div id="tag-container" class="tag-container">
+                <!-- Los badges se insertarán aquí con JS -->
+                <input type="text" id="keywords-input-field" placeholder="Escribe y presiona Coma o Enter...">
+            </div>
+        </div>
+
+        <!-- Botón de acción principal -->
+        <button id="search-btn">
+            <span class="btn-text">Analizar Carpeta</span>
+            <div class="loader hidden"></div>
+        </button>
+
+        <!-- Mensajes de estado -->
+        <div id="status-message" class="message status hidden"></div>
+        <div id="error-message" class="message error hidden"></div>
+
+    </main>
+
+    <!-- Contenedor de resultados (se llenará dinámicamente) -->
+    <div id="results-area" class="hidden">
+        <div class="results-header">
+            <h1>Resultados del Análisis</h1>
+            <button id="save-csv-btn">Guardar Resumen en CSV</button>
+        </div>
+        <div id="results-container">
+            <!-- Las secciones de resultados por carpeta se insertarán aquí -->
+        </div>
+
+        <!-- Sección de Análisis Final -->
+        <div class="final-summary-card">
+            <h2>Análisis General y Conclusiones</h2>
+            <div id="final-summary-container">
+                <!-- El análisis comparativo se insertará aquí -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE AYUDA AÑADIDO (Copiado de tu especificación) -->
+    <div class="help-modal-overlay" id="helpModal">
+        <div class="help-modal">
+            <div class="help-modal-header">
+                <h3>Guía de Uso y Estructura</h3>
+                <button class="close-modal-btn" id="closeModalBtn" aria-label="Cerrar modal">
+                    <svg style="color:aliceblue" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="help-modal-content">
+                <div class="help-section">
+                    
+                    <h4>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                        </svg>Estructura Requerida</h4>
+                        
+                    <p>La herramienta funciona analizando una carpeta principal que debe contener <strong>subcarpetas
+                            por cada materia o categoría</strong>.</p>
+                    <div class="folder-structure">
+                        <span class="folder-line"><span class="folder-icon">📁</span> CARPETA_PRINCIPAL/</span>
+                        <span class="folder-line"><span class="tree-line">├──</span> <span class="folder-icon">📁</span>
+                            Civil/</span>
+                        <span class="folder-line"><span class="tree-line">│ └──</span> <span class="file-icon">📄</span>
+                            proyecto_puentes.docx</span>
+                        <span class="folder-line"><span class="tree-line">├──</span> <span class="folder-icon">📁</span>
+                            Quimica/</span>
+                        <span class="folder-line"><span class="tree-line">│ ├──</span> <span class="file-icon">📄</span>
+                            experimento_acidos.pdf</span>
+                        <span class="folder-line"><span class="tree-line">│ └──</span> <span class="file-icon">📄</span>
+                            trabajo_polimeros.docx</span>
+                        <span class="folder-line"><span class="tree-line">└──</span> <span class="folder-icon">📁</span>
+                            Sociales/</span>
+                        <span class="folder-line"><span class="tree-line"> └──</span> <span class="file-icon">📄</span>
+                            ensayo_globalizacion.pptx</span>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <h4>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4"/>
+                            <circle cx="12" cy="12" r="9"/>
+                        </svg>Recomendaciones</h4>
+
+                    <div class="recommendations">
+                        <div class="recommendation-item">
+                            <svg class="recommendation-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 12l2 2 4-4"/>
+                                <circle cx="12" cy="12" r="9"/>
+                            </svg>
+                            <div class="recommendation-text"><strong>Nombres claros:</strong> Usa nombres de carpeta
+                                descriptivos (Civil, Historia, etc.).</div>
+                        </div>
+                        <div class="recommendation-item"><svg class="recommendation-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 12l2 2 4-4"/>
+                                <circle cx="12" cy="12" r="9"/>
+                            </svg>
+                            <div class="recommendation-text"><strong>Formatos compatibles:</strong> .docx, .pdf, .txt 
+                                y otros documentos de texto.</div>
+                        </div>
+                        <div class="recommendation-item"><svg class="recommendation-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 12l2 2 4-4"/>
+                                <circle cx="12" cy="12" r="9"/>
+                            </svg>
+                            <div class="recommendation-text"><strong>Estructura simple:</strong> Evita anidar más
+                                carpetas dentro de las carpetas de materia.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <h4>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        ¿Cómo funciona?</h4>
+                    <ol class="steps-list">
+                        <li><strong>Selecciona tu carpeta principal</strong> haciendo clic en el área de carga.</li>
+                        <li><strong>Ingresa palabras clave</strong> que desees buscar en tus documentos.</li>
+                        <li><strong>Inicia la búsqueda</strong> y obtén resultados organizados por materia.</li>
+                        <li><strong>Exporta los resultados</strong> en formato CSV si lo necesitas.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
