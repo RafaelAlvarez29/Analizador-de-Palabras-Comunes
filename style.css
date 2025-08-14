@@ -1,30 +1,57 @@
 :root {
+  /* Variables que no cambian con el tema */
   --primary-color: #6a11cb;
   --primary-gradient: linear-gradient(135deg, #2575fc, #6a11cb);
   --primary-hover: #5a0eae;
-  --background-color: #f4f7f9;
-  --card-background: #ffffff;
-  --text-color: #333;
-  --subtle-text: #777;
-  --border-color: #e0e6ed;
   --error-color: #d0021b;
   --success-color: #4caf50;
   --font-family: "Poppins", sans-serif;
-
-  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 8px 25px rgba(0, 0, 0, 0.15);
-  --shadow-lg: 0 15px 35px rgba(0, 0, 0, 0.2);
-  --shadow-help: 0 20px 60px rgba(106, 17, 203, 0.15);
-
+  --font-mono: "Fira Code", monospace; /* Añadí esta que faltaba */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
 }
 
+/* --- TEMA OSCURO --- */
+body.dark-mode {
+  /* Nombres de variables UNIFICADOS */
+  --bg-color: #1a202c;
+  --card-bg: #2d3748;
+  --text-color: #edf2f7;
+  --subtle-text: #a0aec0;
+  --border-color: #4a5568;
+  --header-color: #e2e8f0;
+  --table-header-bg: #262f3d;
+  --interactive-row-hover: #354153;
+  --interactive-row-expanded: #3c4a60;
+  --detail-row-bg: #323d4e;
+  --tooltip-bg: #e2e8f0;
+  --tooltip-text: #1a202c;
+  --summary-card-bg: linear-gradient(135deg, #2d3748, #1a202c);
+  --summary-p-bg: rgba(74, 85, 104, 0.6);
+}
+
 body {
+  /* Nombres de variables UNIFICADOS */
+  --bg-color: #f4f7f9;
+  --card-bg: #ffffff;
+  --text-color: #333;
+  --subtle-text: #777;
+  --border-color: #e0e6ed;
+  --header-color: #444;
+  --table-header-bg: #f9fafb;
+  --interactive-row-hover: #f5f8ff;
+  --interactive-row-expanded: #eef2ff;
+  --detail-row-bg: #fdfdff;
+  --tooltip-bg: #333;
+  --tooltip-text: white;
+  --summary-card-bg: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  --summary-p-bg: rgba(255, 255, 255, 0.6);
+
+  /* --- Aplicación de variables --- */
   font-family: var(--font-family);
-  background-color: var(--background-color);
+  background-color: var(--bg-color); /* Usando el nombre unificado */
   color: var(--text-color);
   margin: 0;
   padding: 20px;
@@ -34,10 +61,13 @@ body {
   align-items: center;
   min-height: 100vh;
   box-sizing: border-box;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .card {
-  background: var(--card-background);
+  background: var(--card-bg);
+  color: var(--text-color);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
   padding: 30px 40px;
   border-radius: 16px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
@@ -55,7 +85,7 @@ header {
 header h1 {
   margin: 0 0 5px 0;
   font-weight: 700;
-  color: #444;
+  color: var(--header-color);
 }
 header p {
   margin: 0;
@@ -90,6 +120,7 @@ header p {
   margin-bottom: 20px;
 }
 #keywords-input {
+  background-color: var(--card-bg);
   width: 100%;
   padding: 12px 15px;
   border-radius: 8px;
@@ -204,7 +235,7 @@ td {
   white-space: nowrap;
 }
 thead th {
-  background-color: #f9fafb;
+  background-color: var(--table-header-bg);
   font-weight: 600;
 }
 tbody tr:last-child td {
@@ -218,10 +249,10 @@ tbody tr:last-child td {
   transition: background-color 0.2s ease;
 }
 .parent-row:hover {
-  background-color: #f5f8ff;
+  background-color: var(--interactive-row-hover);
 }
 .parent-row.expanded {
-  background-color: #eef2ff;
+  background-color: var(--interactive-row-expanded);
   font-weight: 600;
 }
 
@@ -233,8 +264,8 @@ tbody tr:last-child td {
 }
 
 .detail-row td {
-  background-color: #fdfdff;
-  color: #555;
+  background-color: var(--detail-row-bg);
+  color: var(--subtle-text);
   font-size: 0.95em;
   border-bottom-style: dashed;
 }
@@ -250,7 +281,8 @@ tbody tr:last-child td {
 
 /* --- Final Summary Card --- */
 .final-summary-card {
-  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  background: var(--summary-card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   margin-top: 30px;
   padding: 30px;
@@ -261,7 +293,7 @@ tbody tr:last-child td {
   font-size: 1.6em;
 }
 #final-summary-container p {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--summary-p-bg);
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 12px;
@@ -391,16 +423,15 @@ header {
 }
 
 .help-modal-header {
- background: var(--primary-gradient);
-            color: white;
-            padding: 25px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-              border-top-right-radius: var(--radius-md);
-                        border-top-left-radius: var(--radius-md);
+  background: var(--primary-gradient);
+  color: white;
+  padding: 25px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top-right-radius: var(--radius-md);
+  border-top-left-radius: var(--radius-md);
 }
-
 
 .help-modal-header h3 {
   margin: 0;
@@ -419,13 +450,14 @@ header {
   transition: background-color 0.2s, color 0.2s;
 }
 .close-modal-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-  color: var(--text-color);
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
 }
 
 .help-modal-content {
   padding: 10px 25px 25px 25px;
   overflow-y: auto;
+  background-color: var(--bg-color);
 }
 
 .help-section {
@@ -442,14 +474,14 @@ header {
 
 /* Estructura de carpetas (código que proporcionaste, integrado) */
 .folder-structure {
-  background: #f8f9fa;
+  background: var(--bg-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 20px;
-  font-family: var(--font-mono);
+  /*font-family: var(--font-mono); fuente consola*/
   font-size: 0.9rem;
   line-height: 1.8;
-  color: #2d3748;
+  color: var(--text-color);
   overflow-x: auto;
 }
 .folder-line {
@@ -469,9 +501,10 @@ header {
 
 /* Recomendaciones y ¿Cómo funciona? (código que proporcionaste, integrado y mejorado) */
 .recommendations {
-  background: linear-gradient(135deg, #f0f4ff, #e0e7ff);
-              border-radius: var(--radius-md);
-
+  /* Usa las variables de la tarjeta de resumen para un look similar pero más sutil */
+  background: var(--summary-card-bg); 
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color); /* Añade un borde para mejor definición */
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -490,9 +523,10 @@ header {
   align-items: flex-start;
   gap: 12px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--bg-color); /* <-- Usa el color de fondo principal de la página */
   border-radius: var(--radius-sm);
   transition: all 0.2s ease;
+  margin-bottom: 10px; /* Para asegurar el espaciado */
 }
 .steps-list {
   list-style-type: decimal;
@@ -508,69 +542,144 @@ header {
 
 /* --- ESTILOS PARA INPUT DE TAGS/BADGES --- */
 .tag-container {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    box-sizing: border-box;
-    cursor: text;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-sizing: border-box;
+  cursor: text;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 .tag-container:focus-within {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.2);
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.2);
 }
 
 .tag-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background-color: #eef2ff;
-    color: var(--primary-color);
-    padding: 5px 10px;
-    border-radius: 16px; /* Para forma de píldora */
-    font-size: 0.9em;
-    font-weight: 500;
-    white-space: nowrap;
-    animation: fadeIn 0.2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #eef2ff;
+  color: var(--primary-color);
+  padding: 5px 10px;
+  border-radius: 16px; /* Para forma de píldora */
+  font-size: 0.9em;
+  font-weight: 500;
+  white-space: nowrap;
+  animation: fadeIn 0.2s ease-in-out;
 }
 @keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.8); }
-    to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .tag-remove {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 16px;
-    height: 16px;
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: bold;
-    line-height: 1;
-    transition: background-color 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 16px;
+  height: 16px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+  transition: background-color 0.2s;
 }
 .tag-remove:hover {
-    background-color: var(--primary-hover);
+  background-color: var(--primary-hover);
 }
 
 #keywords-input-field {
-    border: none;
-    outline: none;
-    background: transparent;
-    padding: 4px 0;
-    font-family: var(--font-family);
-    font-size: 1em;
-    flex-grow: 1;
-    min-width: 150px; /* Evita que sea demasiado pequeño */
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 4px 0;
+  font-family: var(--font-family);
+  font-size: 1em;
+  flex-grow: 1;
+  min-width: 150px; /* Evita que sea demasiado pequeño */
+   color: var(--text-color); 
+}
+
+/* --- CONTENEDOR DE ACCIONES MODIFICADO --- */
+.card-actions {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  display: flex;
+  flex-direction: column; /* Apila los botones verticalmente */
+  gap: 10px; /* Espacio entre los botones */
+  z-index: 10; /* Asegura que estén por encima de otros elementos */
+}
+
+/* --- CLASE COMÚN PARA TODOS LOS BOTONES DE ACCIÓN --- */
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease-in-out;
+  background-image: var(--primary-gradient);
+  position: relative;
+  text-decoration: none; /* Para la etiqueta <a> */
+}
+
+.action-btn:hover {
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.action-btn::after {
+  /* Tooltip */
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 10px); /* Posiciona el tooltip a la izquierda */
+  transform: translateY(-50%);
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  white-space: nowrap;
+}
+.dark-mode .action-btn::after {
+  background: #e2e8f0;
+  color: #1a202c;
+}
+.action-btn:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+.action-btn svg {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.4s ease;
 }
