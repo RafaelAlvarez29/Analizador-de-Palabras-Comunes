@@ -502,7 +502,7 @@ header {
 /* Recomendaciones y ¿Cómo funciona? (código que proporcionaste, integrado y mejorado) */
 .recommendations {
   /* Usa las variables de la tarjeta de resumen para un look similar pero más sutil */
-  background: var(--summary-card-bg); 
+  background: var(--summary-card-bg);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color); /* Añade un borde para mejor definición */
   display: flex;
@@ -523,7 +523,9 @@ header {
   align-items: flex-start;
   gap: 12px;
   padding: 12px;
-  background: var(--bg-color); /* <-- Usa el color de fondo principal de la página */
+  background: var(
+    --bg-color
+  ); /* <-- Usa el color de fondo principal de la página */
   border-radius: var(--radius-sm);
   transition: all 0.2s ease;
   margin-bottom: 10px; /* Para asegurar el espaciado */
@@ -613,7 +615,7 @@ header {
   font-size: 1em;
   flex-grow: 1;
   min-width: 150px; /* Evita que sea demasiado pequeño */
-   color: var(--text-color); 
+  color: var(--text-color);
 }
 
 /* --- CONTENEDOR DE ACCIONES MODIFICADO --- */
@@ -682,4 +684,49 @@ header {
   width: 20px;
   height: 20px;
   transition: transform 0.4s ease;
+}
+
+/* --- ESTILOS PARA VISUALIZACIÓN DE DATOS (GRÁFICOS) --- */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.chart-container {
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.03);
+}
+body.dark-mode .chart-container {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.chart-container h3 {
+  text-align: center;
+  margin: 0 0 20px 0;
+  font-weight: 500;
+  color: var(--header-color);
+}
+
+/* El lienzo del gráfico debe ser responsivo */
+canvas {
+  max-width: 100%;
+  height: auto !important;
+}
+
+.category-content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* La tabla ocupa más espacio */
+    gap: 20px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .category-content-grid {
+        grid-template-columns: 1fr; /* Apilar en pantallas pequeñas */
+    }
 }

@@ -26,6 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedFiles = [];
     let lastAnalysisData = null;
 
+    let totalBarChart = null;
+    let radarChart = null;
+    // Usaremos un objeto para los gráficos de pastel, ya que habrá varios
+    let pieCharts = {};
     // --- LÓGICA PARA INPUT DE TAGS/BADGES ---
     const createTag = (text) => {
         const cleanedText = text.trim().toLowerCase();
@@ -165,43 +169,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Lógica Principal de Análisis ---
     searchBtn.addEventListener('click', async () => {
+        // --- PASO 1: Limpieza inicial de la interfaz ---
         hideMessages();
         resultsArea.classList.add('hidden');
         resultsContainer.innerHTML = '';
         finalSummaryContainer.innerHTML = '';
         lastAnalysisData = null;
 
+        // --- PASO 2 (¡NUEVO!): Destruir los gráficos de la búsqueda anterior ---
+        // Esto es crucial para evitar que los gráficos viejos se queden "flotando"
+        // o causen errores al intentar dibujar sobre el mismo canvas.
+        if (totalBarChart) {
+            totalBarChart.destroy();
+            totalBarChart = null; // Liberar la referencia
+        }
+        if (radarChart) {
+            radarChart.destroy();
+            radarChart = null; // Liberar la referencia
+        }
+        Object.values(pieCharts).forEach(chart => chart.destroy());
+        pieCharts = {}; // Limpiar el objeto de gráficos de pastel
+
+        // --- PASO 3: Validación de entradas (como antes) ---
+        const selectedFiles = Array.from(fileInput.files);
         if (selectedFiles.length === 0) {
             showMessage(errorMessage, 'Por favor, selecciona una carpeta.');
             return;
         }
 
         const keywordList = getKeywordsFromTags();
-
         if (keywordList.length === 0) {
             showMessage(errorMessage, 'Por favor, ingresa al menos una palabra clave.');
             return;
         }
 
+        // --- PASO 4: Preparación para el análisis (como antes) ---
         showLoader(true);
         const supportedFiles = selectedFiles.filter(f => /\.(pdf|docx|pptx)$/i.test(f.name));
-
         if (supportedFiles.length === 0) {
             showLoader(false);
             showMessage(errorMessage, 'La carpeta no contiene archivos compatibles (.pdf, .docx, .pptx).');
             return;
         }
-
         showMessage(statusMessage, `Procesando ${supportedFiles.length} archivos...`);
 
+        // --- PASO 5: Ejecución del análisis (como antes) ---
         const processingPromises = supportedFiles.map(file => processFile(file, keywordList));
         const results = await Promise.allSettled(processingPromises);
         const analysisData = aggregateResults(results);
         lastAnalysisData = analysisData;
 
+        // --- PASO 6: Renderizado de resultados en la interfaz ---
+
+        // a) Muestra las tablas interactivas (y crea los gráficos de pastel dentro de esta función)
         displayResults(analysisData, keywordList);
+
+        // b) Muestra el resumen de texto con las conclusiones
         generateFinalSummary(analysisData, keywordList);
 
+        // c) (¡NUEVO!) Llama a la función que crea los gráficos globales (barras y radar)
+        generateCharts(analysisData, keywordList);
+
+        // --- PASO 7: Mostrar todo y finalizar (como antes) ---
         resultsArea.classList.remove('hidden');
         hideMessages();
         showLoader(false);
@@ -269,45 +298,88 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const displayResults = (analysisData, keywordList) => {
+        // 1. Limpiar el contenedor de resultados principal
         resultsContainer.innerHTML = '';
+
+        // 2. Comprobar si hay datos para mostrar
         if (Object.keys(analysisData).length === 0) {
-            resultsContainer.innerHTML = '<p>No se encontraron resultados para las carpetas seleccionadas.</p>';
+            resultsContainer.innerHTML = '<p class="no-results-message">No se encontraron resultados para los archivos y palabras clave proporcionados.</p>';
             return;
         }
 
+        // 3. Iterar sobre cada categoría (materia) para crear su sección
         for (const category in analysisData) {
             const categoryData = analysisData[category];
             const section = document.createElement('section');
             section.className = 'category-section';
 
-            let tableHtml = `
-                <h2 class="category-header">${category} (${categoryData.fileCount} archivos)</h2>
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 20px;"></th>
-                                <th>Palabra Clave</th>
-                                <th>Total Apariciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
+            // 4. Generar el HTML para la tabla interactiva (lado izquierdo de la cuadrícula)
+            let tableHtml = `<div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 20px;"></th>
+                                        <th>Palabra Clave</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
 
             keywordList.forEach(keyword => {
                 const totalCount = categoryData.summary[keyword] || 0;
                 const details = categoryData.details[keyword];
+
+                // Solo añadir una fila si la palabra se encontró en esta categoría
                 if (totalCount > 0) {
-                    tableHtml += `<tr class="parent-row" data-keyword="${keyword}"><td><span class="toggle-icon">▸</span></td><td>${keyword}</td><td>${totalCount}</td></tr>`;
+                    // Fila principal expandible
+                    tableHtml += `<tr class="parent-row" data-keyword="${keyword}">
+                                <td><span class="toggle-icon">▸</span></td>
+                                <td>${keyword}</td>
+                                <td>${totalCount}</td>
+                              </tr>`;
+
+                    // Filas de detalle (ocultas por defecto)
                     if (details) {
                         details.sort((a, b) => b.count - a.count).forEach(item => {
-                            tableHtml += `<tr class="detail-row hidden" data-parent-keyword="${keyword}"><td></td><td class="file-name-cell">${item.file}</td><td>${item.count}</td></tr>`;
+                            tableHtml += `<tr class="detail-row hidden" data-parent-keyword="${keyword}">
+                                        <td></td>
+                                        <td class="file-name-cell">${item.file}</td>
+                                        <td>${item.count}</td>
+                                      </tr>`;
                         });
                     }
                 }
             });
             tableHtml += `</tbody></table></div>`;
-            section.innerHTML = tableHtml;
+
+            // 5. Ensamblar la estructura final de la sección usando la cuadrícula
+            // Se coloca la tabla y el contenedor para el gráfico de pastel.
+            section.innerHTML = `
+            <h2 class="category-header">${category} (${categoryData.fileCount} archivos)</h2>
+            
+            <!-- Estructura de la cuadrícula para alinear tabla y gráfico -->
+            <div class="category-content-grid">
+                
+                <!-- Contenedor para la tabla -->
+                <div class="table-container">
+                    ${tableHtml}
+                </div>
+                
+                <!-- Contenedor para el gráfico de pastel -->
+                <div class="chart-container">
+                    <h3>Proporción por Palabra</h3>
+                    <canvas id="pieChart-${category}"></canvas>
+                </div>
+
+            </div>
+        `;
+
+            // 6. Añadir la sección completa al DOM
             resultsContainer.appendChild(section);
+
+            // 7. (¡CRUCIAL!) Llamar a la función que crea el gráfico de pastel DESPUÉS
+            // de que el canvas ya existe en la página.
+            createPieChartForCategory(category, categoryData, keywordList);
         }
     };
 
@@ -524,4 +596,135 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         applyTheme('light'); // Default
     }
+    // --- NUEVA SECCIÓN DE CÓDIGO PARA GRÁFICOS ---
+
+    const generateCharts = (analysisData, keywordList) => {
+        // Datos pre-calculados para los gráficos globales
+        const globalChartData = prepareGlobalChartData(analysisData, keywordList);
+
+        // 1. Crear Gráfico de Barras Total
+        createTotalBarChart(globalChartData);
+
+        // 2. Crear Gráfico de Radar
+        createRadarChart(globalChartData);
+
+        // 3. Los gráficos de pastel se crean dentro de `displayResults`
+    };
+
+    const prepareGlobalChartData = (analysisData, keywordList) => {
+        const labels = keywordList.filter(k => {
+            // Incluir solo keywords que aparecieron al menos una vez
+            return Object.values(analysisData).some(cat => (cat.summary[k] || 0) > 0);
+        });
+
+        const totalCounts = labels.map(label => {
+            return Object.values(analysisData).reduce((sum, category) => sum + (category.summary[label] || 0), 0);
+        });
+
+        const datasets = Object.entries(analysisData).map(([category, data]) => {
+            return {
+                label: category,
+                data: labels.map(label => data.summary[label] || 0),
+                // Asignar colores dinámicos
+            };
+        });
+
+        return { labels, totalCounts, datasets };
+    };
+
+    const createTotalBarChart = (globalChartData) => {
+        const ctx = document.getElementById('totalBarChart').getContext('2d');
+        totalBarChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: globalChartData.labels,
+                datasets: [{
+                    label: 'Frecuencia Total',
+                    data: globalChartData.totalCounts,
+                    backgroundColor: 'rgba(106, 17, 203, 0.6)',
+                    borderColor: 'rgba(106, 17, 203, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true }
+                },
+                responsive: true,
+                plugins: { legend: { display: false } }
+            }
+        });
+    };
+
+    const createRadarChart = (globalChartData) => {
+        const ctx = document.getElementById('radarChart').getContext('2d');
+
+        // Asignar colores a cada dataset para el radar
+        const radarColors = [
+            'rgba(37, 117, 252, 0.4)', 'rgba(252, 37, 117, 0.4)',
+            'rgba(117, 252, 37, 0.4)', 'rgba(252, 117, 37, 0.4)',
+            'rgba(37, 252, 117, 0.4)', 'rgba(117, 37, 252, 0.4)'
+        ];
+        globalChartData.datasets.forEach((ds, index) => {
+            ds.backgroundColor = radarColors[index % radarColors.length];
+            ds.borderColor = radarColors[index % radarColors.length].replace('0.4', '1');
+            ds.borderWidth = 2;
+        });
+
+        radarChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: globalChartData.labels,
+                datasets: globalChartData.datasets
+            },
+            options: {
+                responsive: true,
+                elements: { line: { borderWidth: 3 } },
+                plugins: {
+                    legend: { position: 'top' }
+                }
+            }
+        });
+    };
+
+    const createPieChartForCategory = (category, categoryData, keywordList) => {
+        const canvas = document.getElementById(`pieChart-${category}`);
+        if (!canvas) return; // Salir si el canvas no existe
+
+        const ctx = canvas.getContext('2d');
+        const labels = keywordList.filter(k => (categoryData.summary[k] || 0) > 0);
+        const data = labels.map(l => categoryData.summary[l]);
+
+        // Si no hay datos para esta categoría, no renderizar el gráfico
+        if (data.length === 0) {
+            canvas.parentElement.innerHTML += '<p class="no-chart-data">No se encontraron palabras clave para graficar en esta categoría.</p>';
+            canvas.remove();
+            return;
+        }
+
+        pieCharts[category] = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Proporción de Palabras',
+                    data: data,
+                    backgroundColor: [
+                        'rgba(106, 17, 203, 0.7)', 'rgba(37, 117, 252, 0.7)',
+                        'rgba(255, 99, 132, 0.7)', 'rgba(75, 192, 192, 0.7)',
+                        'rgba(255, 206, 86, 0.7)', 'rgba(153, 102, 255, 0.7)'
+                    ],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            }
+        });
+    };
 });
