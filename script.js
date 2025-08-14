@@ -394,8 +394,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const rows = [["Categoria", "Palabra Clave", "Total Apariciones", "Archivos con la Palabra (cantidad)"]];
-
+        // --- Parte 1: Generar el detalle (como antes) ---
+        const detailRows = [["Categoria", "Palabra Clave", "Total Apariciones", "Archivos con la Palabra (cantidad)"]];
         for (const category in lastAnalysisData) {
             const categoryData = lastAnalysisData[category];
             const keywordsInSummary = Object.keys(categoryData.summary).filter(k => categoryData.summary[k] > 0);
@@ -404,32 +404,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 const filesDetail = categoryData.details[keyword]
                     ? categoryData.details[keyword].map(d => `${d.file} (${d.count})`).join('; ')
                     : 'N/A';
-                rows.push([category, keyword, totalCount, `"${filesDetail}"`]);
+                detailRows.push([category, keyword, totalCount, `"${filesDetail}"`]);
             }
         }
-        // 1. Convertimos el array de filas a un string CSV.
-        const csvString = rows.map(e => e.join(",")).join("\n");
 
-        // 2. Añadimos el BOM (\uFEFF) al principio del string para asegurar la compatibilidad con Excel.
-        const bom = "\uFEFF";
+        // --- Parte 2: Generar la sección de resumen (¡NUEVO!) ---
+        const summaryRows = [];
+        // Añadimos un par de líneas en blanco para separar las secciones
+        summaryRows.push([]);
+        summaryRows.push([]);
+        summaryRows.push(["--- RESUMEN POR MATERIA ---"]); // Título de la sección
+        summaryRows.push(["Materia", "Archivos Analizados", "Total Palabras Clave Encontradas", "Palabra Más Frecuente (Apariciones)"]);
 
-        // 3. Creamos un Blob, que es la forma moderna y robusta de manejar archivos en el navegador.
+        for (const category in lastAnalysisData) {
+            const categoryData = lastAnalysisData[category];
+            const fileCount = categoryData.fileCount;
+
+            let totalWordsFound = 0;
+            let mostFrequentWord = 'N/A';
+            let maxCount = 0;
+
+            for (const keyword in categoryData.summary) {
+                const count = categoryData.summary[keyword];
+                totalWordsFound += count;
+                if (count > maxCount) {
+                    maxCount = count;
+                    mostFrequentWord = keyword;
+                }
+            }
+
+            // Formateamos la palabra más frecuente con su conteo
+            const mostFrequentWordWithCount = maxCount > 0 ? `${mostFrequentWord} (${maxCount})` : 'N/A';
+
+            summaryRows.push([category, fileCount, totalWordsFound, mostFrequentWordWithCount]);
+        }
+
+        // --- Parte 3: Unir todo y descargar (con el BOM) ---
+
+        // Unimos las filas de detalle y las de resumen
+        const allRows = detailRows.concat(summaryRows);
+
+        const csvString = allRows.map(e => e.join(",")).join("\n");
+        const bom = "\uFEFF"; // Byte Order Mark para compatibilidad con Excel
         const blob = new Blob([bom + csvString], { type: 'text/csv;charset=utf-8;' });
-
-        // 4. Creamos una URL temporal para este "archivo virtual".
         const url = URL.createObjectURL(blob);
 
-        // 5. Creamos un enlace invisible, le asignamos la URL y simulamos un clic para descargar.
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", "analisis_comparativo.csv");
+        link.setAttribute("download", "analisis_completo.csv");
         document.body.appendChild(link);
         link.click();
 
-        // 6. Limpiamos eliminando el enlace y la URL temporal.
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-
     });
 
     // --- LÓGICA PARA EL MODAL DE AYUDA ---
