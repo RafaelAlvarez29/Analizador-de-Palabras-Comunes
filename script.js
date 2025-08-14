@@ -12,11 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsContainer = document.getElementById('results-container');
     const saveCsvBtn = document.getElementById('save-csv-btn');
     const finalSummaryContainer = document.getElementById('final-summary-container');
-    
+
     // Elementos para el campo de tags
     const tagContainer = document.getElementById('tag-container');
     const keywordsInputField = document.getElementById('keywords-input-field');
-    
+
     // Elementos para el modal de ayuda
     const openHelpBtn = document.getElementById('openHelpBtn');
     const helpModal = document.getElementById('helpModal');
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         removeBtn.className = 'tag-remove';
         removeBtn.innerHTML = '&times;';
         removeBtn.setAttribute('aria-label', `Eliminar ${cleanedText}`);
-        
+
         tagBadge.appendChild(tagText);
         tagBadge.appendChild(removeBtn);
 
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.onerror = () => reject('Error al leer el archivo.');
         reader.readAsArrayBuffer(file);
     });
-    
+
     const extractTextFromPptx = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -175,8 +175,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const keywordList = getKeywordsFromTags(); 
-        
+        const keywordList = getKeywordsFromTags();
+
         if (keywordList.length === 0) {
             showMessage(errorMessage, 'Por favor, ingresa al menos una palabra clave.');
             return;
@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (totalCount > 0) {
                     tableHtml += `<tr class="parent-row" data-keyword="${keyword}"><td><span class="toggle-icon">▸</span></td><td>${keyword}</td><td>${totalCount}</td></tr>`;
                     if (details) {
-                        details.sort((a,b) => b.count - a.count).forEach(item => {
+                        details.sort((a, b) => b.count - a.count).forEach(item => {
                             tableHtml += `<tr class="detail-row hidden" data-parent-keyword="${keyword}"><td></td><td class="file-name-cell">${item.file}</td><td>${item.count}</td></tr>`;
                         });
                     }
@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsContainer.appendChild(section);
         }
     };
-    
+
     resultsContainer.addEventListener('click', (e) => {
         const parentRow = e.target.closest('.parent-row');
         if (!parentRow) return;
@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
             row.classList.toggle('hidden');
             if (!row.classList.contains('hidden')) areHidden = false;
         });
-        
+
         icon.textContent = areHidden ? '▸' : '▾';
         parentRow.classList.toggle('expanded', !areHidden);
     });
@@ -352,16 +352,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const foundKeywords = Object.keys(totalCounts).filter(k => totalCounts[k] > 0);
-        
+
         if (foundKeywords.length > 0) {
             const mostFrequentWord = foundKeywords.reduce((a, b) => totalCounts[a] > totalCounts[b] ? a : b);
             html += `<p>La palabra más frecuente es <strong>"${mostFrequentWord}"</strong>, con un total de ${totalCounts[mostFrequentWord]} apariciones.</p>`;
-        
+
             const mostSharedWord = foundKeywords.reduce((a, b) => categoryPresence[a].count > categoryPresence[b].count ? a : b);
             const numCategories = Object.keys(analysisData).length;
             html += `<p>La palabra más compartida es <strong>"${mostSharedWord}"</strong>, apareciendo en ${categoryPresence[mostSharedWord].count} de ${numCategories} materias distintas.</p>`;
         }
-        
+
         html += `<p><strong>Palabras distintivas por materia:</strong></p><ul>`;
         let distinctiveFound = false;
         for (const category in analysisData) {
@@ -378,42 +378,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             if (distinctiveWord && maxRatio > 0.5 && (analysisData[category].summary[distinctiveWord] || 0) > 0) {
-                 html += `<li>Para <strong>${category}</strong>, <strong>"${distinctiveWord}"</strong> parece ser un término clave (concentra el ${Math.round(maxRatio * 100)}% de sus apariciones).</li>`;
-                 distinctiveFound = true;
+                html += `<li>Para <strong>${category}</strong>, <strong>"${distinctiveWord}"</strong> parece ser un término clave (concentra el ${Math.round(maxRatio * 100)}% de sus apariciones).</li>`;
+                distinctiveFound = true;
             }
         }
         if (!distinctiveFound) html += `<li>No se encontraron palabras suficientemente distintivas.</li>`;
         html += `</ul>`;
-        
+
         finalSummaryContainer.innerHTML = html;
     };
-    
+
     saveCsvBtn.addEventListener('click', () => {
         if (!lastAnalysisData) {
-            alert("No hay datos para guardar. Realiza un análisis primero.");
+            alert("No hay datos de análisis para guardar. Por favor, realiza un análisis primero.");
             return;
         }
 
         const rows = [["Categoria", "Palabra Clave", "Total Apariciones", "Archivos con la Palabra (cantidad)"]];
+
         for (const category in lastAnalysisData) {
             const categoryData = lastAnalysisData[category];
             const keywordsInSummary = Object.keys(categoryData.summary).filter(k => categoryData.summary[k] > 0);
             for (const keyword of keywordsInSummary) {
                 const totalCount = categoryData.summary[keyword] || 0;
-                const filesDetail = categoryData.details[keyword] ? categoryData.details[keyword].map(d => `${d.file} (${d.count})`).join('; ') : 'N/A';
+                const filesDetail = categoryData.details[keyword]
+                    ? categoryData.details[keyword].map(d => `${d.file} (${d.count})`).join('; ')
+                    : 'N/A';
                 rows.push([category, keyword, totalCount, `"${filesDetail}"`]);
             }
         }
-        
-        let csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
-        
-        const encodedUri = encodeURI(csvContent);
+        // 1. Convertimos el array de filas a un string CSV.
+        const csvString = rows.map(e => e.join(",")).join("\n");
+
+        // 2. Añadimos el BOM (\uFEFF) al principio del string para asegurar la compatibilidad con Excel.
+        const bom = "\uFEFF";
+
+        // 3. Creamos un Blob, que es la forma moderna y robusta de manejar archivos en el navegador.
+        const blob = new Blob([bom + csvString], { type: 'text/csv;charset=utf-8;' });
+
+        // 4. Creamos una URL temporal para este "archivo virtual".
+        const url = URL.createObjectURL(blob);
+
+        // 5. Creamos un enlace invisible, le asignamos la URL y simulamos un clic para descargar.
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
+        link.setAttribute("href", url);
         link.setAttribute("download", "analisis_comparativo.csv");
         document.body.appendChild(link);
         link.click();
+
+        // 6. Limpiamos eliminando el enlace y la URL temporal.
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
     });
 
     // --- LÓGICA PARA EL MODAL DE AYUDA ---
