@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusMessage = document.getElementById('status-message');
     const errorMessage = document.getElementById('error-message');
     const resultsArea = document.getElementById('results-area');
+    const toggleWidthBtn = document.getElementById('toggleWidthBtn');
     const resultsContainer = document.getElementById('results-container');
     const saveCsvBtn = document.getElementById('save-csv-btn');
     const finalSummaryContainer = document.getElementById('final-summary-container');
@@ -23,6 +24,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const helpModal = document.getElementById('helpModal');
     const closeModalBtn = document.getElementById('closeModalBtn');
 
+    // --- NUEVO: Iconos SVG como constantes ---
+    const expandIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>`;
+    const contractIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>`;
     let selectedFiles = [];
     let lastAnalysisData = null;
 
@@ -234,6 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsArea.classList.remove('hidden');
         hideMessages();
         showLoader(false);
+        resultsArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
     });
     const processFile = async (file, keywordList) => {
         const pathParts = file.webkitRelativePath.split('/');
@@ -727,4 +733,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
+    toggleWidthBtn.addEventListener('click', () => {
+        // Alterna la clase 'expanded' en el contenedor de resultados
+        resultsArea.classList.toggle('expanded');
+
+        // Comprueba si ahora está en modo expandido para cambiar el icono y el tooltip
+        if (resultsArea.classList.contains('expanded')) {
+            toggleWidthBtn.innerHTML = contractIcon;
+            toggleWidthBtn.dataset.tooltip = "Contraer Vista";
+            toggleWidthBtn.setAttribute('aria-label', "Contraer vista de resultados");
+        } else {
+            toggleWidthBtn.innerHTML = expandIcon;
+            toggleWidthBtn.dataset.tooltip = "Expandir Vista";
+            toggleWidthBtn.setAttribute('aria-label', "Expandir vista de resultados");
+        }
+    });
 });

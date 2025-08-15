@@ -177,8 +177,19 @@ header p {
 
 /* --- Results Area --- */
 #results-area {
-  width: 100%;
-  max-width: 900px;
+  width: 50%;
+  /*max-width: 900px;*/
+  transition: max-width 0.4s ease-in-out;
+}
+
+#results-area.expanded {
+  width: 90%; /* O el valor que prefieras, como 98% o 1800px */
+}
+
+.results-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* Espacio entre los botones */
 }
 .results-header {
   display: flex;
@@ -187,6 +198,7 @@ header p {
   margin-bottom: 20px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border-color);
+  gap: 20px; /* Añade espacio entre el título y los botones */
 }
 .results-header h1 {
   font-size: 2em;
@@ -202,6 +214,48 @@ header p {
   font-size: 0.9em;
   transition: background-color 0.3s ease;
   font-weight: 500;
+}
+.action-btn-results {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  color: var(--primary-color);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s ease-in-out;
+  position: relative; /* Para el tooltip */
+}
+.action-btn-results svg {
+  width: 20px;
+  height: 20px;
+}
+.action-btn-results::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  white-space: nowrap;
+  z-index: 10;
+}
+.action-btn-results:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+body.dark-mode .action-btn-results:hover {
+  background-color: var(--interactive-row-hover);
 }
 
 .category-section {
@@ -719,14 +773,14 @@ canvas {
 }
 
 .category-content-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr; /* La tabla ocupa más espacio */
-    gap: 20px;
-    align-items: start;
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* La tabla ocupa más espacio */
+  gap: 20px;
+  align-items: start;
 }
 
 @media (max-width: 900px) {
-    .category-content-grid {
-        grid-template-columns: 1fr; /* Apilar en pantallas pequeñas */
-    }
+  .category-content-grid {
+    grid-template-columns: 1fr; /* Apilar en pantallas pequeñas */
+  }
 }

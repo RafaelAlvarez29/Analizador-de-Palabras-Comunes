@@ -78,20 +78,32 @@
 
     </main>
 
+
+    <!-- Contenedor de resultados (se llenará dinámicamente) -->
     <div id="results-area" class="hidden">
         <div class="results-header">
             <h1>Resultados del Análisis</h1>
-            <button id="save-csv-btn">Guardar Resumen en CSV</button>
+
+            <!-- Contenedor de acciones con AMBOS botones -->
+            <div class="results-actions">
+                <button id="toggleWidthBtn" class="action-btn-results" data-tooltip="Expandir Vista">
+                    <!-- Icono de expandir -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                    </svg>
+                </button>
+                <button id="save-csv-btn">Guardar Resumen en CSV</button>
+            </div>
         </div>
 
-        <!-- SECCIÓN DE ANÁLISIS GENERAL (MOVIDA AQUÍ PARA MEJOR FLUJO) -->
+        <!-- SECCIÓN DE ANÁLISIS GENERAL CON GRÁFICOS -->
         <div class="final-summary-card">
             <h2>Análisis General y Conclusiones</h2>
             <div id="final-summary-container">
                 <!-- El resumen de texto irá aquí -->
             </div>
 
-            <!-- CONTENEDORES PARA GRÁFICOS GLOBALES (¡NUEVO!) -->
             <div class="charts-grid">
                 <div class="chart-container">
                     <h3>Frecuencia Total por Palabra</h3>
@@ -106,26 +118,7 @@
 
         <!-- Contenedor para los resultados por categoría -->
         <div id="results-container">
-            <!-- Las secciones de resultados por carpeta se insertarán aquí,
-             y cada una tendrá su propio contenedor de gráfico de pastel -->
-        </div>
-    </div>
-    <!-- Contenedor de resultados (se llenará dinámicamente) -->
-    <div id="results-area" class="hidden">
-        <div class="results-header">
-            <h1>Resultados del Análisis</h1>
-            <button id="save-csv-btn">Guardar Resumen en CSV</button>
-        </div>
-        <div id="results-container">
             <!-- Las secciones de resultados por carpeta se insertarán aquí -->
-        </div>
-
-        <!-- Sección de Análisis Final -->
-        <div class="final-summary-card">
-            <h2>Análisis General y Conclusiones</h2>
-            <div id="final-summary-container">
-                <!-- El análisis comparativo se insertará aquí -->
-            </div>
         </div>
     </div>
 
