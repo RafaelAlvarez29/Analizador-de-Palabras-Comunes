@@ -1,0 +1,1704 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador de Documentos por Carpetas</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Librerías para procesar archivos en el navegador -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.18/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <link rel="shortcut icon" href="assets/icon.svg" type="image/x-icon">
+</head>
+<style>
+    :root {
+  /* Variables que no cambian con el tema */
+  --primary-color: #6a11cb;
+  --primary-gradient: linear-gradient(135deg, #2575fc, #6a11cb);
+  --primary-hover: #5a0eae;
+  --error-color: #d0021b;
+  --success-color: #4caf50;
+  --font-family: "Poppins", sans-serif;
+  --font-mono: "Fira Code", monospace; /* Añadí esta que faltaba */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+
+/* --- TEMA OSCURO --- */
+body.dark-mode {
+  /* Nombres de variables UNIFICADOS */
+  --bg-color: #1a202c;
+  --card-bg: #2d3748;
+  --text-color: #edf2f7;
+  --subtle-text: #a0aec0;
+  --border-color: #4a5568;
+  --header-color: #e2e8f0;
+  --table-header-bg: #262f3d;
+  --interactive-row-hover: #354153;
+  --interactive-row-expanded: #3c4a60;
+  --detail-row-bg: #323d4e;
+  --tooltip-bg: #e2e8f0;
+  --tooltip-text: #1a202c;
+  --summary-card-bg: linear-gradient(135deg, #2d3748, #1a202c);
+  --summary-p-bg: rgba(74, 85, 104, 0.6);
+}
+
+body {
+  /* Nombres de variables UNIFICADOS */
+  --bg-color: #f4f7f9;
+  --card-bg: #ffffff;
+  --text-color: #333;
+  --subtle-text: #777;
+  --border-color: #e0e6ed;
+  --header-color: #444;
+  --table-header-bg: #f9fafb;
+  --interactive-row-hover: #f5f8ff;
+  --interactive-row-expanded: #eef2ff;
+  --detail-row-bg: #fdfdff;
+  --tooltip-bg: #333;
+  --tooltip-text: white;
+  --summary-card-bg: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  --summary-p-bg: rgba(255, 255, 255, 0.6);
+
+  /* --- Aplicación de variables --- */
+  font-family: var(--font-family);
+  background-color: var(--bg-color); /* Usando el nombre unificado */
+  color: var(--text-color);
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 100vh;
+  box-sizing: border-box;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.card {
+  background: var(--card-bg);
+  color: var(--text-color);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  padding: 30px 40px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
+  width: 100%;
+  max-width: 700px;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+  margin-bottom: 30px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+header h1 {
+  margin: 0 0 5px 0;
+  font-weight: 700;
+  color: var(--header-color);
+}
+header p {
+  margin: 0;
+  color: var(--subtle-text);
+  font-size: 0.95em;
+}
+
+#drop-zone {
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  padding: 25px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+}
+#file-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--subtle-text);
+  cursor: pointer;
+}
+#file-label svg {
+  color: var(--primary-color);
+  width: 32px;
+  height: 32px;
+}
+
+.input-group {
+  margin-bottom: 20px;
+}
+#keywords-input {
+  background-color: var(--card-bg);
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  font-family: var(--font-family);
+  font-size: 1em;
+  box-sizing: border-box;
+}
+
+#search-btn {
+  width: 100%;
+  padding: 15px;
+  background-image: var(--primary-gradient);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+#search-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+#search-btn:disabled {
+  background: #c5c8ce;
+  cursor: not-allowed;
+}
+
+.message {
+  padding: 12px;
+  margin-top: 20px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.9em;
+}
+.message.error {
+  background-color: #ffebee;
+  color: var(--error-color);
+  border: 1px solid var(--error-color);
+}
+.message.status {
+  background-color: #e3f2fd;
+  color: #0d47a1;
+  border: 1px solid #bbdefb;
+}
+.hidden {
+  display: none !important;
+}
+
+/* --- Results Area --- */
+#results-area {
+  width: 100%;
+  max-width: 900px;
+}
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+.results-header h1 {
+  font-size: 2em;
+  margin: 0;
+}
+#save-csv-btn {
+  background-color: var(--success-color);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.3s ease;
+  font-weight: 500;
+}
+
+.category-section {
+  background: var(--card-background);
+  border-radius: 12px;
+  margin-bottom: 25px;
+  padding: 25px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+.category-header {
+  font-size: 1.6em;
+  margin: 0 0 20px 0;
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th,
+td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+thead th {
+  background-color: var(--table-header-bg);
+  font-weight: 600;
+}
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* --- NUEVOS ESTILOS PARA LA TABLA INTERACTIVA --- */
+.parent-row {
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+.parent-row:hover {
+  background-color: var(--interactive-row-hover);
+}
+.parent-row.expanded {
+  background-color: var(--interactive-row-expanded);
+  font-weight: 600;
+}
+
+.toggle-icon {
+  display: inline-block;
+  width: 20px; /* Asegura alineación */
+  font-family: monospace;
+  color: var(--primary-color);
+}
+
+.detail-row td {
+  background-color: var(--detail-row-bg);
+  color: var(--subtle-text);
+  font-size: 0.95em;
+  border-bottom-style: dashed;
+}
+
+.detail-row .file-name-cell {
+  padding-left: 45px; /* Indentación para mostrar anidación */
+}
+.file-name-cell::before {
+  content: "📄"; /* Icono de archivo */
+  margin-right: 8px;
+  opacity: 0.7;
+}
+
+/* --- Final Summary Card --- */
+.final-summary-card {
+  background: var(--summary-card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-top: 30px;
+  padding: 30px;
+}
+.final-summary-card h2 {
+  text-align: center;
+  margin: 0 0 25px 0;
+  font-size: 1.6em;
+}
+#final-summary-container p {
+  background: var(--summary-p-bg);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+#final-summary-container strong {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.loader {
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+  width: 20px;
+  height: 20px;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .card,
+  #results-area {
+    max-width: 100%;
+  }
+  .results-header {
+    flex-direction: column;
+    gap: 15px;
+  }
+}
+
+/* --- ESTILOS PARA EL BOTÓN DE AYUDA --- */
+.help-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-image: var(--primary-gradient);
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease-in-out;
+}
+.help-btn:hover {
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+.help-btn::after {
+  /* Tooltip */
+  content: attr(data-tooltip);
+  right: 0;
+
+  position: absolute;
+  bottom: -30px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  border-radius: 6px;
+}
+.help-btn:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+/* ... (El resto de los estilos de la card principal no cambian) ... */
+
+/* --- ESTILOS PARA EL MODAL DE AYUDA --- */
+.help-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 20, 40, 0.5);
+  backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  z-index: 1000;
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0.3s, opacity 0.3s ease;
+}
+.help-modal-overlay.visible {
+  visibility: visible;
+  opacity: 1;
+}
+
+.help-modal {
+  background: var(--card-background);
+  border-radius: var(--radius-md);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 650px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  transform: scale(0.95);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.help-modal-overlay.visible .help-modal {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.help-modal-header {
+  background: var(--primary-gradient);
+  color: white;
+  padding: 25px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top-right-radius: var(--radius-md);
+  border-top-left-radius: var(--radius-md);
+}
+
+.help-modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.close-modal-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  display: flex;
+  color: var(--subtle-text);
+  transition: background-color 0.2s, color 0.2s;
+}
+.close-modal-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.help-modal-content {
+  padding: 10px 25px 25px 25px;
+  overflow-y: auto;
+  background-color: var(--bg-color);
+}
+
+.help-section {
+  margin-top: 25px;
+}
+.help-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--primary-color);
+}
+
+/* Estructura de carpetas (código que proporcionaste, integrado) */
+.folder-structure {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  /*font-family: var(--font-mono); fuente consola*/
+  font-size: 0.9rem;
+  line-height: 1.8;
+  color: var(--text-color);
+  overflow-x: auto;
+}
+.folder-line {
+  display: block;
+  padding: 2px 0;
+}
+.folder-icon {
+  color: #f59e0b;
+}
+.file-icon {
+  color: #3b82f6;
+}
+.tree-line {
+  color: #9ca3af;
+  padding-right: 5px;
+}
+
+/* Recomendaciones y ¿Cómo funciona? (código que proporcionaste, integrado y mejorado) */
+.recommendations {
+  /* Usa las variables de la tarjeta de resumen para un look similar pero más sutil */
+  background: var(--summary-card-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color); /* Añade un borde para mejor definición */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  margin: 20px 0;
+}
+.recommendation-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--success-color);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.recommendation-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: var(
+    --bg-color
+  ); /* <-- Usa el color de fondo principal de la página */
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  margin-bottom: 10px; /* Para asegurar el espaciado */
+}
+.steps-list {
+  list-style-type: decimal;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.steps-list li::marker {
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+/* --- ESTILOS PARA INPUT DE TAGS/BADGES --- */
+.tag-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-sizing: border-box;
+  cursor: text;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.tag-container:focus-within {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(106, 17, 203, 0.2);
+}
+
+.tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #eef2ff;
+  color: var(--primary-color);
+  padding: 5px 10px;
+  border-radius: 16px; /* Para forma de píldora */
+  font-size: 0.9em;
+  font-weight: 500;
+  white-space: nowrap;
+  animation: fadeIn 0.2s ease-in-out;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.tag-remove {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 16px;
+  height: 16px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+  transition: background-color 0.2s;
+}
+.tag-remove:hover {
+  background-color: var(--primary-hover);
+}
+
+#keywords-input-field {
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 4px 0;
+  font-family: var(--font-family);
+  font-size: 1em;
+  flex-grow: 1;
+  min-width: 150px; /* Evita que sea demasiado pequeño */
+  color: var(--text-color);
+}
+
+/* --- CONTENEDOR DE ACCIONES MODIFICADO --- */
+.card-actions {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  display: flex;
+  flex-direction: column; /* Apila los botones verticalmente */
+  gap: 10px; /* Espacio entre los botones */
+  z-index: 10; /* Asegura que estén por encima de otros elementos */
+}
+
+/* --- CLASE COMÚN PARA TODOS LOS BOTONES DE ACCIÓN --- */
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease-in-out;
+  background-image: var(--primary-gradient);
+  position: relative;
+  text-decoration: none; /* Para la etiqueta <a> */
+}
+
+.action-btn:hover {
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.action-btn::after {
+  /* Tooltip */
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 10px); /* Posiciona el tooltip a la izquierda */
+  transform: translateY(-50%);
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  white-space: nowrap;
+}
+.dark-mode .action-btn::after {
+  background: #e2e8f0;
+  color: #1a202c;
+}
+.action-btn:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+.action-btn svg {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.4s ease;
+}
+
+/* --- ESTILOS PARA VISUALIZACIÓN DE DATOS (GRÁFICOS) --- */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.chart-container {
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.03);
+}
+body.dark-mode .chart-container {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.chart-container h3 {
+  text-align: center;
+  margin: 0 0 20px 0;
+  font-weight: 500;
+  color: var(--header-color);
+}
+
+/* El lienzo del gráfico debe ser responsivo */
+canvas {
+  max-width: 100%;
+  height: auto !important;
+}
+
+.category-content-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* La tabla ocupa más espacio */
+    gap: 20px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .category-content-grid {
+        grid-template-columns: 1fr; /* Apilar en pantallas pequeñas */
+    }
+}
+</style>
+<body>
+
+    <main class="card">
+        <div class="card-actions">
+            <button class="action-btn" id="themeToggleBtn" aria-label="Cambiar tema" data-tooltip="Tema"></button>
+            <button class="action-btn" id="openHelpBtn" aria-label="Mostrar ayuda" data-tooltip="Ayuda">?</button>
+
+            <!-- NUEVO BOTÓN/ENLACE A GITHUB -->
+            <a href="https://github.com/RafaelAlvarez29/Analizador-de-Palabras-Comunes" target="_blank"
+                rel="noopener noreferrer" class="action-btn" aria-label="Ver código fuente en GitHub"
+                data-tooltip="GitHub">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.91 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                </svg>
+            </a>
+        </div>
+        <header>
+            <h1>Análisis Comparativo de Documentos</h1>
+            <p>Selecciona una carpeta y descubre la frecuencia y distribución de palabras clave por materia.</p>
+        </header>
+
+        <!-- Input para seleccionar carpeta -->
+        <div id="drop-zone">
+            <input type="file" id="file-input" webkitdirectory directory multiple hidden>
+            <label for="file-input" id="file-label">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                        d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z">
+                    </path>
+                </svg>
+                <span id="file-name-display"><strong>Haz clic para seleccionar una carpeta</strong></span>
+                <span id="folder-info" class="subtle-text"></span>
+            </label>
+        </div>
+
+        <!-- Entrada de palabras clave -->
+        <div class="input-group">
+            <label for="keywords-input-field">Palabras a buscar</label>
+            <div id="tag-container" class="tag-container">
+                <!-- Los badges se insertarán aquí con JS -->
+                <input type="text" id="keywords-input-field" placeholder="Escribe y presiona Coma o Enter...">
+            </div>
+        </div>
+
+        <!-- Botón de acción principal -->
+        <button id="search-btn">
+            <span class="btn-text">Analizar Carpeta</span>
+            <div class="loader hidden"></div>
+        </button>
+
+        <!-- Mensajes de estado -->
+        <div id="status-message" class="message status hidden"></div>
+        <div id="error-message" class="message error hidden"></div>
+
+    </main>
+
+    <div id="results-area" class="hidden">
+        <div class="results-header">
+            <h1>Resultados del Análisis</h1>
+            <button id="save-csv-btn">Guardar Resumen en CSV</button>
+        </div>
+
+        <!-- SECCIÓN DE ANÁLISIS GENERAL (MOVIDA AQUÍ PARA MEJOR FLUJO) -->
+        <div class="final-summary-card">
+            <h2>Análisis General y Conclusiones</h2>
+            <div id="final-summary-container">
+                <!-- El resumen de texto irá aquí -->
+            </div>
+
+            <!-- CONTENEDORES PARA GRÁFICOS GLOBALES (¡NUEVO!) -->
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>Frecuencia Total por Palabra</h3>
+                    <canvas id="totalBarChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Distribución por Materia (Radar)</h3>
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenedor para los resultados por categoría -->
+        <div id="results-container">
+            <!-- Las secciones de resultados por carpeta se insertarán aquí,
+             y cada una tendrá su propio contenedor de gráfico de pastel -->
+        </div>
+    </div>.
+    <!-- Contenedor de resultados (se llenará dinámicamente) -->
+    <div id="results-area" class="hidden">
+        <div class="results-header">
+            <h1>Resultados del Análisis</h1>
+            <button id="save-csv-btn">Guardar Resumen en CSV</button>
+        </div>
+        <div id="results-container">
+            <!-- Las secciones de resultados por carpeta se insertarán aquí -->
+        </div>
+
+        <!-- Sección de Análisis Final -->
+        <div class="final-summary-card">
+            <h2>Análisis General y Conclusiones</h2>
+            <div id="final-summary-container">
+                <!-- El análisis comparativo se insertará aquí -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE AYUDA AÑADIDO (Copiado de tu especificación) -->
+    <div class="help-modal-overlay" id="helpModal">
+        <div class="help-modal">
+            <div class="help-modal-header">
+                <h3>Guía de Uso y Estructura</h3>
+                <button class="close-modal-btn" id="closeModalBtn" aria-label="Cerrar modal">
+                    <svg style="color:aliceblue" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="help-modal-content">
+                <div class="help-section">
+
+                    <h4>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                        </svg>Estructura Requerida
+                    </h4>
+
+                    <p>La herramienta funciona analizando una carpeta principal que debe contener <strong>subcarpetas
+                            por cada materia o categoría</strong>.</p>
+                    <div class="folder-structure">
+                        <span class="folder-line"><span class="folder-icon">📁</span> CARPETA_PRINCIPAL/</span>
+                        <span class="folder-line"><span class="tree-line">├──</span> <span class="folder-icon">📁</span>
+                            Civil/</span>
+                        <span class="folder-line"><span class="tree-line">│ └──</span> <span class="file-icon">📄</span>
+                            proyecto_puentes.docx</span>
+                        <span class="folder-line"><span class="tree-line">├──</span> <span class="folder-icon">📁</span>
+                            Quimica/</span>
+                        <span class="folder-line"><span class="tree-line">│ ├──</span> <span class="file-icon">📄</span>
+                            experimento_acidos.pdf</span>
+                        <span class="folder-line"><span class="tree-line">│ └──</span> <span class="file-icon">📄</span>
+                            trabajo_polimeros.docx</span>
+                        <span class="folder-line"><span class="tree-line">└──</span> <span class="folder-icon">📁</span>
+                            Sociales/</span>
+                        <span class="folder-line"><span class="tree-line"> └──</span> <span class="file-icon">📄</span>
+                            ensayo_globalizacion.pptx</span>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <h4>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M9 12l2 2 4-4" />
+                            <circle cx="12" cy="12" r="9" />
+                        </svg>Recomendaciones
+                    </h4>
+
+                    <div class="recommendations">
+                        <div class="recommendation-item">
+                            <svg class="recommendation-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M9 12l2 2 4-4" />
+                                <circle cx="12" cy="12" r="9" />
+                            </svg>
+                            <div class="recommendation-text"><strong>Nombres claros:</strong> Usa nombres de carpeta
+                                descriptivos (Civil, Historia, etc.).</div>
+                        </div>
+                        <div class="recommendation-item"><svg class="recommendation-icon" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 12l2 2 4-4" />
+                                <circle cx="12" cy="12" r="9" />
+                            </svg>
+                            <div class="recommendation-text"><strong>Formatos compatibles:</strong> .docx, .pdf, .txt
+                                y otros documentos de texto.</div>
+                        </div>
+                        <div class="recommendation-item"><svg class="recommendation-icon" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 12l2 2 4-4" />
+                                <circle cx="12" cy="12" r="9" />
+                            </svg>
+                            <div class="recommendation-text"><strong>Estructura simple:</strong> Evita anidar más
+                                carpetas dentro de las carpetas de materia.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <h4>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                        ¿Cómo funciona?
+                    </h4>
+                    <ol class="steps-list">
+                        <li><strong>Selecciona tu carpeta principal</strong> haciendo clic en el área de carga.</li>
+                        <li><strong>Ingresa palabras clave</strong> que desees buscar en tus documentos.</li>
+                        <li><strong>Inicia la búsqueda</strong> y obtén resultados organizados por materia.</li>
+                        <li><strong>Exporta los resultados</strong> en formato CSV si lo necesitas.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+    // --- Selección de Elementos del DOM ---
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const fileInput = document.getElementById('file-input');
+    const fileNameDisplay = document.getElementById('file-name-display');
+    const folderInfo = document.getElementById('folder-info');
+    const searchBtn = document.getElementById('search-btn');
+    const searchBtnText = document.querySelector('#search-btn .btn-text');
+    const loader = document.querySelector('#search-btn .loader');
+    const statusMessage = document.getElementById('status-message');
+    const errorMessage = document.getElementById('error-message');
+    const resultsArea = document.getElementById('results-area');
+    const resultsContainer = document.getElementById('results-container');
+    const saveCsvBtn = document.getElementById('save-csv-btn');
+    const finalSummaryContainer = document.getElementById('final-summary-container');
+
+    // Elementos para el campo de tags
+    const tagContainer = document.getElementById('tag-container');
+    const keywordsInputField = document.getElementById('keywords-input-field');
+
+    // Elementos para el modal de ayuda
+    const openHelpBtn = document.getElementById('openHelpBtn');
+    const helpModal = document.getElementById('helpModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+
+    let selectedFiles = [];
+    let lastAnalysisData = null;
+
+    let totalBarChart = null;
+    let radarChart = null;
+    // Usaremos un objeto para los gráficos de pastel, ya que habrá varios
+    let pieCharts = {};
+    // --- LÓGICA PARA INPUT DE TAGS/BADGES ---
+    const createTag = (text) => {
+        const cleanedText = text.trim().toLowerCase();
+        if (!cleanedText) return;
+
+        const existingTags = Array.from(tagContainer.querySelectorAll('.tag-badge span')).map(span => span.textContent);
+        if (existingTags.includes(cleanedText)) {
+            keywordsInputField.value = '';
+            return;
+        }
+
+        const tagBadge = document.createElement('div');
+        tagBadge.className = 'tag-badge';
+
+        const tagText = document.createElement('span');
+        tagText.textContent = cleanedText;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'tag-remove';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.setAttribute('aria-label', `Eliminar ${cleanedText}`);
+
+        tagBadge.appendChild(tagText);
+        tagBadge.appendChild(removeBtn);
+
+        tagContainer.insertBefore(tagBadge, keywordsInputField);
+        keywordsInputField.value = '';
+    };
+
+    keywordsInputField.addEventListener('keydown', (e) => {
+        if (e.key === ',' || e.key === 'Enter') {
+            e.preventDefault();
+            createTag(keywordsInputField.value);
+        }
+    });
+
+    keywordsInputField.addEventListener('blur', () => {
+        createTag(keywordsInputField.value);
+    });
+
+    tagContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('tag-remove')) {
+            e.target.parentElement.remove();
+        } else if (e.target === tagContainer) {
+            keywordsInputField.focus();
+        }
+    });
+
+    const getKeywordsFromTags = () => {
+        return Array.from(tagContainer.querySelectorAll('.tag-badge span')).map(span => span.textContent);
+    };
+
+    // --- Funciones de UI y Feedback ---
+    const showLoader = (show) => {
+        searchBtnText.classList.toggle('hidden', show);
+        loader.classList.toggle('hidden', !show);
+        searchBtn.disabled = show;
+    };
+
+    const showMessage = (element, message) => {
+        element.textContent = message;
+        element.classList.remove('hidden');
+    };
+
+    const hideMessages = () => {
+        errorMessage.classList.add('hidden');
+        statusMessage.classList.add('hidden');
+    };
+
+    // --- Manejo de Selección de Carpeta ---
+    fileInput.addEventListener('change', () => {
+        hideMessages();
+        selectedFiles = Array.from(fileInput.files);
+        if (selectedFiles.length > 0) {
+            const rootFolderName = selectedFiles[0].webkitRelativePath.split('/')[0];
+            fileNameDisplay.innerHTML = `Carpeta seleccionada: <strong>${rootFolderName}</strong>`;
+            const supportedFiles = selectedFiles.filter(f => /\.(pdf|docx|pptx)$/i.test(f.name));
+            folderInfo.textContent = `${supportedFiles.length} archivos compatibles encontrados.`;
+        } else {
+            fileNameDisplay.innerHTML = `<strong>Haz clic para seleccionar una carpeta</strong>`;
+            folderInfo.textContent = '';
+        }
+    });
+
+    // --- Funciones de Extracción de Texto ---
+    const extractTextFromPdf = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const pdf = await pdfjsLib.getDocument({ data: e.target.result }).promise;
+                let textContent = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const text = await page.getTextContent();
+                    textContent += text.items.map(s => s.str).join(' ') + '\n';
+                }
+                resolve(textContent);
+            } catch (error) { reject('Error al procesar el archivo PDF.'); }
+        };
+        reader.onerror = () => reject('Error al leer el archivo.');
+        reader.readAsArrayBuffer(file);
+    });
+
+    const extractTextFromDocx = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            mammoth.extractRawText({ arrayBuffer: e.target.result })
+                .then(result => resolve(result.value))
+                .catch(() => reject('Error al procesar el archivo DOCX.'));
+        };
+        reader.onerror = () => reject('Error al leer el archivo.');
+        reader.readAsArrayBuffer(file);
+    });
+
+    const extractTextFromPptx = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            JSZip.loadAsync(e.target.result).then(zip => {
+                const slidePromises = [];
+                zip.folder('ppt/slides').forEach((relativePath, file) => {
+                    if (relativePath.startsWith('slide') && relativePath.endsWith('.xml')) {
+                        slidePromises.push(file.async('string'));
+                    }
+                });
+                return Promise.all(slidePromises);
+            }).then(slidesXml => {
+                const textContent = slidesXml.map(xml => {
+                    const textNodes = xml.match(/<a:t>(.*?)<\/a:t>/g) || [];
+                    return textNodes.map(node => node.replace(/<a:t>|<\/a:t>/g, '')).join(' ');
+                }).join('\n');
+                resolve(textContent);
+            }).catch(() => reject('Error al procesar el archivo PPTX.'));
+        };
+        reader.onerror = () => reject('Error al leer el archivo.');
+        reader.readAsArrayBuffer(file);
+    });
+
+    // --- Lógica Principal de Análisis ---
+    searchBtn.addEventListener('click', async () => {
+        // --- PASO 1: Limpieza inicial de la interfaz ---
+        hideMessages();
+        resultsArea.classList.add('hidden');
+        resultsContainer.innerHTML = '';
+        finalSummaryContainer.innerHTML = '';
+        lastAnalysisData = null;
+
+        // --- PASO 2 (¡NUEVO!): Destruir los gráficos de la búsqueda anterior ---
+        // Esto es crucial para evitar que los gráficos viejos se queden "flotando"
+        // o causen errores al intentar dibujar sobre el mismo canvas.
+        if (totalBarChart) {
+            totalBarChart.destroy();
+            totalBarChart = null; // Liberar la referencia
+        }
+        if (radarChart) {
+            radarChart.destroy();
+            radarChart = null; // Liberar la referencia
+        }
+        Object.values(pieCharts).forEach(chart => chart.destroy());
+        pieCharts = {}; // Limpiar el objeto de gráficos de pastel
+
+        // --- PASO 3: Validación de entradas (como antes) ---
+        const selectedFiles = Array.from(fileInput.files);
+        if (selectedFiles.length === 0) {
+            showMessage(errorMessage, 'Por favor, selecciona una carpeta.');
+            return;
+        }
+
+        const keywordList = getKeywordsFromTags();
+        if (keywordList.length === 0) {
+            showMessage(errorMessage, 'Por favor, ingresa al menos una palabra clave.');
+            return;
+        }
+
+        // --- PASO 4: Preparación para el análisis (como antes) ---
+        showLoader(true);
+        const supportedFiles = selectedFiles.filter(f => /\.(pdf|docx|pptx)$/i.test(f.name));
+        if (supportedFiles.length === 0) {
+            showLoader(false);
+            showMessage(errorMessage, 'La carpeta no contiene archivos compatibles (.pdf, .docx, .pptx).');
+            return;
+        }
+        showMessage(statusMessage, `Procesando ${supportedFiles.length} archivos...`);
+
+        // --- PASO 5: Ejecución del análisis (como antes) ---
+        const processingPromises = supportedFiles.map(file => processFile(file, keywordList));
+        const results = await Promise.allSettled(processingPromises);
+        const analysisData = aggregateResults(results);
+        lastAnalysisData = analysisData;
+
+        // --- PASO 6: Renderizado de resultados en la interfaz ---
+
+        // a) Muestra las tablas interactivas (y crea los gráficos de pastel dentro de esta función)
+        displayResults(analysisData, keywordList);
+
+        // b) Muestra el resumen de texto con las conclusiones
+        generateFinalSummary(analysisData, keywordList);
+
+        // c) (¡NUEVO!) Llama a la función que crea los gráficos globales (barras y radar)
+        generateCharts(analysisData, keywordList);
+
+        // --- PASO 7: Mostrar todo y finalizar (como antes) ---
+        resultsArea.classList.remove('hidden');
+        hideMessages();
+        showLoader(false);
+    });
+    const processFile = async (file, keywordList) => {
+        const pathParts = file.webkitRelativePath.split('/');
+        const category = pathParts.length > 1 ? pathParts[pathParts.length - 2] : 'Raíz';
+        const fileName = file.name;
+        const extension = fileName.split('.').pop().toLowerCase();
+        let text = '';
+
+        try {
+            if (extension === 'pdf') text = await extractTextFromPdf(file);
+            else if (extension === 'docx') text = await extractTextFromDocx(file);
+            else if (extension === 'pptx') text = await extractTextFromPptx(file);
+        } catch (error) {
+            console.error(`Error procesando ${fileName}:`, error);
+            return Promise.reject({ fileName, error });
+        }
+
+        // 1. Convertimos todo a minúsculas.
+        let textLower = text.toLowerCase();
+
+        // 2. Normalizamos la puntuación para separar palabras pegadas.
+        textLower = textLower.replace(/([.,;:"()\[\]])/g, ' $1 ');
+
+        // 3. Acolchamos el texto para asegurar los límites de la primera y última palabra.
+        textLower = ' ' + textLower + ' ';
+
+        // 4. El conteo robusto.
+        const counts = {};
+        keywordList.forEach(keyword => {
+            const regex = new RegExp('\\b' + keyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '\\b', 'g');
+            const matches = textLower.match(regex);
+            counts[keyword] = matches ? matches.length : 0;
+        });
+
+        return { category, fileName, counts };
+    };
+
+    const aggregateResults = (results) => {
+        const data = {};
+        results.forEach(result => {
+            if (result.status === 'fulfilled' && result.value) {
+                const { category, fileName, counts } = result.value;
+                if (!data[category]) {
+                    data[category] = { summary: {}, details: {}, fileCount: 0, processedFiles: new Set() };
+                }
+                if (!data[category].processedFiles.has(fileName)) {
+                    data[category].fileCount++;
+                    data[category].processedFiles.add(fileName);
+                }
+                for (const [keyword, count] of Object.entries(counts)) {
+                    data[category].summary[keyword] = (data[category].summary[keyword] || 0) + count;
+                    if (count > 0) {
+                        if (!data[category].details[keyword]) {
+                            data[category].details[keyword] = [];
+                        }
+                        data[category].details[keyword].push({ file: fileName, count });
+                    }
+                }
+            }
+        });
+        return data;
+    };
+
+    const displayResults = (analysisData, keywordList) => {
+        // 1. Limpiar el contenedor de resultados principal
+        resultsContainer.innerHTML = '';
+
+        // 2. Comprobar si hay datos para mostrar
+        if (Object.keys(analysisData).length === 0) {
+            resultsContainer.innerHTML = '<p class="no-results-message">No se encontraron resultados para los archivos y palabras clave proporcionados.</p>';
+            return;
+        }
+
+        // 3. Iterar sobre cada categoría (materia) para crear su sección
+        for (const category in analysisData) {
+            const categoryData = analysisData[category];
+            const section = document.createElement('section');
+            section.className = 'category-section';
+
+            // 4. Generar el HTML para la tabla interactiva (lado izquierdo de la cuadrícula)
+            let tableHtml = `<div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 20px;"></th>
+                                        <th>Palabra Clave</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+
+            keywordList.forEach(keyword => {
+                const totalCount = categoryData.summary[keyword] || 0;
+                const details = categoryData.details[keyword];
+
+                // Solo añadir una fila si la palabra se encontró en esta categoría
+                if (totalCount > 0) {
+                    // Fila principal expandible
+                    tableHtml += `<tr class="parent-row" data-keyword="${keyword}">
+                                <td><span class="toggle-icon">▸</span></td>
+                                <td>${keyword}</td>
+                                <td>${totalCount}</td>
+                              </tr>`;
+
+                    // Filas de detalle (ocultas por defecto)
+                    if (details) {
+                        details.sort((a, b) => b.count - a.count).forEach(item => {
+                            tableHtml += `<tr class="detail-row hidden" data-parent-keyword="${keyword}">
+                                        <td></td>
+                                        <td class="file-name-cell">${item.file}</td>
+                                        <td>${item.count}</td>
+                                      </tr>`;
+                        });
+                    }
+                }
+            });
+            tableHtml += `</tbody></table></div>`;
+
+            // 5. Ensamblar la estructura final de la sección usando la cuadrícula
+            // Se coloca la tabla y el contenedor para el gráfico de pastel.
+            section.innerHTML = `
+            <h2 class="category-header">${category} (${categoryData.fileCount} archivos)</h2>
+            
+            <!-- Estructura de la cuadrícula para alinear tabla y gráfico -->
+            <div class="category-content-grid">
+                
+                <!-- Contenedor para la tabla -->
+                <div class="table-container">
+                    ${tableHtml}
+                </div>
+                
+                <!-- Contenedor para el gráfico de pastel -->
+                <div class="chart-container">
+                    <h3>Proporción por Palabra</h3>
+                    <canvas id="pieChart-${category}"></canvas>
+                </div>
+
+            </div>
+        `;
+
+            // 6. Añadir la sección completa al DOM
+            resultsContainer.appendChild(section);
+
+            // 7. (¡CRUCIAL!) Llamar a la función que crea el gráfico de pastel DESPUÉS
+            // de que el canvas ya existe en la página.
+            createPieChartForCategory(category, categoryData, keywordList);
+        }
+    };
+
+    resultsContainer.addEventListener('click', (e) => {
+        const parentRow = e.target.closest('.parent-row');
+        if (!parentRow) return;
+
+        const keyword = parentRow.dataset.keyword;
+        const tableBody = parentRow.closest('tbody');
+        const detailRows = tableBody.querySelectorAll(`.detail-row[data-parent-keyword="${keyword}"]`);
+        const icon = parentRow.querySelector('.toggle-icon');
+
+        let areHidden = true;
+        detailRows.forEach(row => {
+            row.classList.toggle('hidden');
+            if (!row.classList.contains('hidden')) areHidden = false;
+        });
+
+        icon.textContent = areHidden ? '▸' : '▾';
+        parentRow.classList.toggle('expanded', !areHidden);
+    });
+
+    const generateFinalSummary = (analysisData, keywordList) => {
+        finalSummaryContainer.innerHTML = '';
+        let html = '';
+        const totalCounts = {};
+        const categoryPresence = {};
+
+        keywordList.forEach(k => {
+            totalCounts[k] = 0;
+            categoryPresence[k] = { count: 0, categories: new Set() };
+        });
+
+        for (const category in analysisData) {
+            for (const keyword of keywordList) {
+                const count = analysisData[category].summary[keyword] || 0;
+                if (count > 0) {
+                    totalCounts[keyword] += count;
+                    if (!categoryPresence[keyword].categories.has(category)) {
+                        categoryPresence[keyword].count++;
+                        categoryPresence[keyword].categories.add(category);
+                    }
+                }
+            }
+        }
+
+        const grandTotal = Object.values(totalCounts).reduce((sum, count) => sum + count, 0);
+        if (grandTotal === 0) {
+            finalSummaryContainer.innerHTML = '<p>No se encontraron las palabras clave en ningún documento. No se puede generar un análisis general.</p>';
+            return;
+        }
+
+        const foundKeywords = Object.keys(totalCounts).filter(k => totalCounts[k] > 0);
+
+        if (foundKeywords.length > 0) {
+            const mostFrequentWord = foundKeywords.reduce((a, b) => totalCounts[a] > totalCounts[b] ? a : b);
+            html += `<p>La palabra más frecuente es <strong>"${mostFrequentWord}"</strong>, con un total de ${totalCounts[mostFrequentWord]} apariciones.</p>`;
+
+            const mostSharedWord = foundKeywords.reduce((a, b) => categoryPresence[a].count > categoryPresence[b].count ? a : b);
+            const numCategories = Object.keys(analysisData).length;
+            html += `<p>La palabra más compartida es <strong>"${mostSharedWord}"</strong>, apareciendo en ${categoryPresence[mostSharedWord].count} de ${numCategories} materias distintas.</p>`;
+        }
+
+        html += `<p><strong>Palabras distintivas por materia:</strong></p><ul>`;
+        let distinctiveFound = false;
+        for (const category in analysisData) {
+            let distinctiveWord = '', maxRatio = -1;
+            for (const keyword of foundKeywords) {
+                const countInCategory = analysisData[category].summary[keyword] || 0;
+                const totalCountForKeyword = totalCounts[keyword];
+                if (totalCountForKeyword > 0) {
+                    const ratio = countInCategory / totalCountForKeyword;
+                    if (ratio > maxRatio) {
+                        maxRatio = ratio;
+                        distinctiveWord = keyword;
+                    }
+                }
+            }
+            if (distinctiveWord && maxRatio > 0.5 && (analysisData[category].summary[distinctiveWord] || 0) > 0) {
+                html += `<li>Para <strong>${category}</strong>, <strong>"${distinctiveWord}"</strong> parece ser un término clave (concentra el ${Math.round(maxRatio * 100)}% de sus apariciones).</li>`;
+                distinctiveFound = true;
+            }
+        }
+        if (!distinctiveFound) html += `<li>No se encontraron palabras suficientemente distintivas.</li>`;
+        html += `</ul>`;
+
+        finalSummaryContainer.innerHTML = html;
+    };
+
+    saveCsvBtn.addEventListener('click', () => {
+        if (!lastAnalysisData) {
+            alert("No hay datos de análisis para guardar. Por favor, realiza un análisis primero.");
+            return;
+        }
+
+        // --- Parte 1: Generar el detalle (como antes) ---
+        const detailRows = [["Categoria", "Palabra Clave", "Total Apariciones", "Archivos con la Palabra (cantidad)"]];
+        for (const category in lastAnalysisData) {
+            const categoryData = lastAnalysisData[category];
+            const keywordsInSummary = Object.keys(categoryData.summary).filter(k => categoryData.summary[k] > 0);
+            for (const keyword of keywordsInSummary) {
+                const totalCount = categoryData.summary[keyword] || 0;
+                const filesDetail = categoryData.details[keyword]
+                    ? categoryData.details[keyword].map(d => `${d.file} (${d.count})`).join('; ')
+                    : 'N/A';
+                detailRows.push([category, keyword, totalCount, `"${filesDetail}"`]);
+            }
+        }
+
+        // --- Parte 2: Generar la sección de resumen (¡NUEVO!) ---
+        const summaryRows = [];
+        // Añadimos un par de líneas en blanco para separar las secciones
+        summaryRows.push([]);
+        summaryRows.push([]);
+        summaryRows.push(["--- RESUMEN POR MATERIA ---"]); // Título de la sección
+        summaryRows.push(["Materia", "Archivos Analizados", "Total Palabras Clave Encontradas", "Palabra Más Frecuente (Apariciones)"]);
+
+        for (const category in lastAnalysisData) {
+            const categoryData = lastAnalysisData[category];
+            const fileCount = categoryData.fileCount;
+
+            let totalWordsFound = 0;
+            let mostFrequentWord = 'N/A';
+            let maxCount = 0;
+
+            for (const keyword in categoryData.summary) {
+                const count = categoryData.summary[keyword];
+                totalWordsFound += count;
+                if (count > maxCount) {
+                    maxCount = count;
+                    mostFrequentWord = keyword;
+                }
+            }
+
+            // Formateamos la palabra más frecuente con su conteo
+            const mostFrequentWordWithCount = maxCount > 0 ? `${mostFrequentWord} (${maxCount})` : 'N/A';
+
+            summaryRows.push([category, fileCount, totalWordsFound, mostFrequentWordWithCount]);
+        }
+
+        // --- Parte 3: Unir todo y descargar (con el BOM) ---
+
+        // Unimos las filas de detalle y las de resumen
+        const allRows = detailRows.concat(summaryRows);
+
+        const csvString = allRows.map(e => e.join(",")).join("\n");
+        const bom = "\uFEFF"; // Byte Order Mark para compatibilidad con Excel
+        const blob = new Blob([bom + csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "analisis_completo.csv");
+        document.body.appendChild(link);
+        link.click();
+
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    });
+
+    // --- LÓGICA PARA EL MODAL DE AYUDA ---
+    const openModal = () => {
+        helpModal.classList.add('visible');
+        document.body.classList.add('modal-open');
+    };
+
+    const closeModal = () => {
+        helpModal.classList.remove('visible');
+        document.body.classList.remove('modal-open');
+    };
+
+    openHelpBtn.addEventListener('click', openModal);
+    closeModalBtn.addEventListener('click', closeModal);
+    helpModal.addEventListener('click', (e) => {
+        if (e.target === helpModal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && helpModal.classList.contains('visible')) closeModal();
+    });
+
+
+    const sunIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
+    const moonIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+
+    const applyTheme = (theme) => {
+        if (theme === 'dark') {
+            document.body.classList.add('dark-mode');
+            themeToggleBtn.innerHTML = sunIcon;
+            themeToggleBtn.setAttribute('aria-label', 'Cambiar a modo claro');
+            themeToggleBtn.dataset.tooltip = 'Modo Claro';
+        } else {
+            document.body.classList.remove('dark-mode');
+            themeToggleBtn.innerHTML = moonIcon;
+            themeToggleBtn.setAttribute('aria-label', 'Cambiar a modo oscuro');
+            themeToggleBtn.dataset.tooltip = 'Modo Oscuro';
+        }
+    };
+
+    themeToggleBtn.addEventListener('click', () => {
+        const currentTheme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('theme', newTheme);
+        applyTheme(newTheme);
+    });
+
+    // Cargar el tema al iniciar la página
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if (savedTheme) {
+        applyTheme(savedTheme);
+    } else if (prefersDark) {
+        applyTheme('dark');
+    } else {
+        applyTheme('light'); // Default
+    }
+    // --- NUEVA SECCIÓN DE CÓDIGO PARA GRÁFICOS ---
+
+    const generateCharts = (analysisData, keywordList) => {
+        // Datos pre-calculados para los gráficos globales
+        const globalChartData = prepareGlobalChartData(analysisData, keywordList);
+
+        // 1. Crear Gráfico de Barras Total
+        createTotalBarChart(globalChartData);
+
+        // 2. Crear Gráfico de Radar
+        createRadarChart(globalChartData);
+
+        // 3. Los gráficos de pastel se crean dentro de `displayResults`
+    };
+
+    const prepareGlobalChartData = (analysisData, keywordList) => {
+        const labels = keywordList.filter(k => {
+            // Incluir solo keywords que aparecieron al menos una vez
+            return Object.values(analysisData).some(cat => (cat.summary[k] || 0) > 0);
+        });
+
+        const totalCounts = labels.map(label => {
+            return Object.values(analysisData).reduce((sum, category) => sum + (category.summary[label] || 0), 0);
+        });
+
+        const datasets = Object.entries(analysisData).map(([category, data]) => {
+            return {
+                label: category,
+                data: labels.map(label => data.summary[label] || 0),
+                // Asignar colores dinámicos
+            };
+        });
+
+        return { labels, totalCounts, datasets };
+    };
+
+    const createTotalBarChart = (globalChartData) => {
+        const ctx = document.getElementById('totalBarChart').getContext('2d');
+        totalBarChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: globalChartData.labels,
+                datasets: [{
+                    label: 'Frecuencia Total',
+                    data: globalChartData.totalCounts,
+                    backgroundColor: 'rgba(106, 17, 203, 0.6)',
+                    borderColor: 'rgba(106, 17, 203, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true }
+                },
+                responsive: true,
+                plugins: { legend: { display: false } }
+            }
+        });
+    };
+
+    const createRadarChart = (globalChartData) => {
+        const ctx = document.getElementById('radarChart').getContext('2d');
+
+        // Asignar colores a cada dataset para el radar
+        const radarColors = [
+            'rgba(37, 117, 252, 0.4)', 'rgba(252, 37, 117, 0.4)',
+            'rgba(117, 252, 37, 0.4)', 'rgba(252, 117, 37, 0.4)',
+            'rgba(37, 252, 117, 0.4)', 'rgba(117, 37, 252, 0.4)'
+        ];
+        globalChartData.datasets.forEach((ds, index) => {
+            ds.backgroundColor = radarColors[index % radarColors.length];
+            ds.borderColor = radarColors[index % radarColors.length].replace('0.4', '1');
+            ds.borderWidth = 2;
+        });
+
+        radarChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: globalChartData.labels,
+                datasets: globalChartData.datasets
+            },
+            options: {
+                responsive: true,
+                elements: { line: { borderWidth: 3 } },
+                plugins: {
+                    legend: { position: 'top' }
+                }
+            }
+        });
+    };
+
+    const createPieChartForCategory = (category, categoryData, keywordList) => {
+        const canvas = document.getElementById(`pieChart-${category}`);
+        if (!canvas) return; // Salir si el canvas no existe
+
+        const ctx = canvas.getContext('2d');
+        const labels = keywordList.filter(k => (categoryData.summary[k] || 0) > 0);
+        const data = labels.map(l => categoryData.summary[l]);
+
+        // Si no hay datos para esta categoría, no renderizar el gráfico
+        if (data.length === 0) {
+            canvas.parentElement.innerHTML += '<p class="no-chart-data">No se encontraron palabras clave para graficar en esta categoría.</p>';
+            canvas.remove();
+            return;
+        }
+
+        pieCharts[category] = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Proporción de Palabras',
+                    data: data,
+                    backgroundColor: [
+                        'rgba(106, 17, 203, 0.7)', 'rgba(37, 117, 252, 0.7)',
+                        'rgba(255, 99, 132, 0.7)', 'rgba(75, 192, 192, 0.7)',
+                        'rgba(255, 206, 86, 0.7)', 'rgba(153, 102, 255, 0.7)'
+                    ],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            }
+        });
+    };
+});
+    </script>
+</body>
+
+</html>
