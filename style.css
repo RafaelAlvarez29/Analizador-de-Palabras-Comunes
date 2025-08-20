@@ -30,6 +30,9 @@ body.dark-mode {
   --tooltip-text: #1a202c;
   --summary-card-bg: linear-gradient(135deg, #2d3748, #1a202c);
   --summary-p-bg: rgba(74, 85, 104, 0.6);
+  --back--detalle:#1c2430;
+
+  
 }
 
 body {
@@ -48,7 +51,8 @@ body {
   --tooltip-text: white;
   --summary-card-bg: linear-gradient(135deg, #f5f7fa, #c3cfe2);
   --summary-p-bg: rgba(255, 255, 255, 0.6);
-
+  --back--detalle:#d9d9d9;
+  
   /* --- Aplicación de variables --- */
   font-family: var(--font-family);
   background-color: var(--bg-color); /* Usando el nombre unificado */
@@ -787,17 +791,25 @@ canvas {
 /* --- ESTILOS PARA SNIPPETS DE CONTEXTO --- */
 .context-list {
   margin-top: 10px;
-  padding-left: 15px;
+  padding-left: 0px;
   border-left: 2px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  gap: 8px; /* Espacio entre cada snippet */
+  gap: 10px; /* Espacio entre cada snippet */
+  
+
 }
 
 .context-snippet {
   font-size: 0.85em;
   color: var(--subtle-text);
   line-height: 1.5;
+  border-radius: 5px;
+  background-color: var(--back--detalle);
+  padding: 10px;
+  border-top-left-radius: 0px;
+  border-bottom-left-radius: 0px;
+
 }
 
 .context-snippet strong {
