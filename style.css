@@ -16,6 +16,7 @@
 /* --- TEMA OSCURO --- */
 body.dark-mode {
   /* Nombres de variables UNIFICADOS */
+   --primary-color:#a34fff;
   --bg-color: #1a202c;
   --card-bg: #2d3748;
   --text-color: #edf2f7;

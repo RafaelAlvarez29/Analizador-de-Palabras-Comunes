@@ -257,11 +257,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return Promise.reject({ fileName, error });
         }
 
-        // --- LÓGICA DE BÚSQUEDA Y CAPTURA DE CONTEXTO MEJORADA ---
-        const textLower = text.toLowerCase();
-        const results = {}; // Objeto para almacenar conteos Y contextos
+        // --- SECCIÓN DE LIMPIEZA Y NORMALIZACIÓN DE TEXTO (LA SOLUCIÓN) ---
 
-        // Define qué tan grande será el snippet de contexto (caracteres antes y después)
+        // Paso 1: Eliminar caracteres invisibles y no estándar.
+        // Esta regex conserva letras (incluyendo acentos en español), números, y puntuación básica.
+        // Todo lo demás (como guiones suaves \u00AD) se reemplaza por un espacio.
+        let cleanedText = text.replace(/[^a-zA-Z0-9\s.,;üéáíóúñÜÉÁÍÓÚÑ-]/g, ' ');
+
+        // Paso 2: Normalizar todos los espacios en blanco a un solo espacio.
+        // Esto arregla los espacios extra que pudieron crearse en el paso anterior.
+        cleanedText = cleanedText.replace(/\s+/g, ' ');
+
+        // Paso 3: Convertir a minúsculas para la búsqueda.
+        const textLower = cleanedText.toLowerCase();
+
+        // --- LÓGICA DE BÚSQUEDA (sin cambios, ahora funciona sobre texto limpio) ---
+        const results = {};
         const CONTEXT_LENGTH = 70;
 
         keywordList.forEach(keyword => {
@@ -271,21 +282,18 @@ document.addEventListener('DOMContentLoaded', () => {
             results[keyword] = { count: 0, contexts: [] };
 
             let match;
-            // Usamos exec en un bucle para obtener la posición de cada coincidencia
             while ((match = regex.exec(textLower)) !== null) {
                 results[keyword].count++;
 
-                // Extraemos el snippet del texto original (para mantener mayúsculas/minúsculas)
                 const startIndex = Math.max(0, match.index - CONTEXT_LENGTH);
-                const endIndex = Math.min(text.length, match.index + keyword.length + CONTEXT_LENGTH);
+                const endIndex = Math.min(cleanedText.length, match.index + keyword.length + CONTEXT_LENGTH);
 
-                let snippet = text.substring(startIndex, endIndex);
+                // Usamos el texto original (cleanedText) para el snippet para preservar mayúsculas
+                let snippet = cleanedText.substring(startIndex, endIndex);
 
-                // Añadimos "..." si el snippet no está al principio o al final del texto
                 if (startIndex > 0) snippet = '... ' + snippet;
-                if (endIndex < text.length) snippet += ' ...';
+                if (endIndex < cleanedText.length) snippet += ' ...';
 
-                // Resaltamos la palabra clave encontrada dentro del snippet (insensible a mayúsculas)
                 const highlightRegex = new RegExp(`(${safeKeyword})`, 'gi');
                 snippet = snippet.replace(highlightRegex, '<strong>$1</strong>');
 
@@ -293,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        return { category, fileName, results }; // Devolvemos el nuevo objeto de resultados
+        return { category, fileName, results };
     };
 
     const aggregateResults = (results) => {
@@ -695,8 +703,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 datasets: [{
                     label: 'Frecuencia Total',
                     data: globalChartData.totalCounts,
-                    backgroundColor: 'rgba(106, 17, 203, 0.6)',
-                    borderColor: 'rgba(106, 17, 203, 1)',
+                    backgroundColor: 'rgba(151, 73, 235, 0.6)',
+                    borderColor: 'rgba(135, 50, 226, 1)',
                     borderWidth: 1
                 }]
             },
