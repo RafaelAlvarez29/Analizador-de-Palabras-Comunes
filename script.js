@@ -257,31 +257,52 @@ document.addEventListener('DOMContentLoaded', () => {
             return Promise.reject({ fileName, error });
         }
 
-        // 1. Convertimos todo a minúsculas.
-        let textLower = text.toLowerCase();
+        // --- LÓGICA DE BÚSQUEDA Y CAPTURA DE CONTEXTO MEJORADA ---
+        const textLower = text.toLowerCase();
+        const results = {}; // Objeto para almacenar conteos Y contextos
 
-        // 2. Normalizamos la puntuación para separar palabras pegadas.
-        textLower = textLower.replace(/([.,;:"()\[\]])/g, ' $1 ');
+        // Define qué tan grande será el snippet de contexto (caracteres antes y después)
+        const CONTEXT_LENGTH = 70;
 
-        // 3. Acolchamos el texto para asegurar los límites de la primera y última palabra.
-        textLower = ' ' + textLower + ' ';
-
-        // 4. El conteo robusto.
-        const counts = {};
         keywordList.forEach(keyword => {
-            const regex = new RegExp('\\b' + keyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '\\b', 'g');
-            const matches = textLower.match(regex);
-            counts[keyword] = matches ? matches.length : 0;
+            const safeKeyword = keyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp('\\b' + safeKeyword + '\\b', 'g');
+
+            results[keyword] = { count: 0, contexts: [] };
+
+            let match;
+            // Usamos exec en un bucle para obtener la posición de cada coincidencia
+            while ((match = regex.exec(textLower)) !== null) {
+                results[keyword].count++;
+
+                // Extraemos el snippet del texto original (para mantener mayúsculas/minúsculas)
+                const startIndex = Math.max(0, match.index - CONTEXT_LENGTH);
+                const endIndex = Math.min(text.length, match.index + keyword.length + CONTEXT_LENGTH);
+
+                let snippet = text.substring(startIndex, endIndex);
+
+                // Añadimos "..." si el snippet no está al principio o al final del texto
+                if (startIndex > 0) snippet = '... ' + snippet;
+                if (endIndex < text.length) snippet += ' ...';
+
+                // Resaltamos la palabra clave encontrada dentro del snippet (insensible a mayúsculas)
+                const highlightRegex = new RegExp(`(${safeKeyword})`, 'gi');
+                snippet = snippet.replace(highlightRegex, '<strong>$1</strong>');
+
+                results[keyword].contexts.push(snippet);
+            }
         });
 
-        return { category, fileName, counts };
+        return { category, fileName, results }; // Devolvemos el nuevo objeto de resultados
     };
 
     const aggregateResults = (results) => {
         const data = {};
         results.forEach(result => {
             if (result.status === 'fulfilled' && result.value) {
-                const { category, fileName, counts } = result.value;
+                // Desestructuramos el nuevo objeto de resultados
+                const { category, fileName, results: fileResults } = result.value;
+
                 if (!data[category]) {
                     data[category] = { summary: {}, details: {}, fileCount: 0, processedFiles: new Set() };
                 }
@@ -289,13 +310,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     data[category].fileCount++;
                     data[category].processedFiles.add(fileName);
                 }
-                for (const [keyword, count] of Object.entries(counts)) {
-                    data[category].summary[keyword] = (data[category].summary[keyword] || 0) + count;
-                    if (count > 0) {
+
+                // Iteramos sobre los resultados por palabra clave
+                for (const keyword in fileResults) {
+                    const keywordData = fileResults[keyword];
+                    if (keywordData.count > 0) {
+                        // Sumamos al total de la categoría
+                        data[category].summary[keyword] = (data[category].summary[keyword] || 0) + keywordData.count;
+
+                        // Creamos el array de detalles si no existe
                         if (!data[category].details[keyword]) {
                             data[category].details[keyword] = [];
                         }
-                        data[category].details[keyword].push({ file: fileName, count });
+
+                        // Añadimos el objeto de detalle del archivo, incluyendo los contextos
+                        data[category].details[keyword].push({
+                            file: fileName,
+                            count: keywordData.count,
+                            contexts: keywordData.contexts
+                        });
                     }
                 }
             }
@@ -347,11 +380,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Filas de detalle (ocultas por defecto)
                     if (details) {
                         details.sort((a, b) => b.count - a.count).forEach(item => {
+                            // Generamos la lista de contextos si existen
+                            let contextsHtml = '';
+                            if (item.contexts && item.contexts.length > 0) {
+                                contextsHtml = '<div class="context-list">';
+                                item.contexts.forEach(context => {
+                                    // Usamos innerHTML para que la etiqueta <strong> funcione
+                                    contextsHtml += `<div class="context-snippet">${context}</div>`;
+                                });
+                                contextsHtml += '</div>';
+                            }
+
+                            // Añadimos la fila de detalle con el nombre del archivo y la lista de contextos
                             tableHtml += `<tr class="detail-row hidden" data-parent-keyword="${keyword}">
-                                        <td></td>
-                                        <td class="file-name-cell">${item.file}</td>
-                                        <td>${item.count}</td>
-                                      </tr>`;
+                    <td></td>
+                    <td class="file-name-cell">
+                        ${item.file}
+                        ${contextsHtml}  <!-- Aquí insertamos los contextos -->
+                    </td>
+                    <td>${item.count}</td>
+                  </tr>`;
                         });
                     }
                 }

@@ -784,3 +784,33 @@ canvas {
     grid-template-columns: 1fr; /* Apilar en pantallas pequeñas */
   }
 }
+/* --- ESTILOS PARA SNIPPETS DE CONTEXTO --- */
+.context-list {
+  margin-top: 10px;
+  padding-left: 15px;
+  border-left: 2px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* Espacio entre cada snippet */
+}
+
+.context-snippet {
+  font-size: 0.85em;
+  color: var(--subtle-text);
+  line-height: 1.5;
+}
+
+.context-snippet strong {
+  color: var(--primary-color);
+  font-weight: 600;
+  background-color: rgba(106, 17, 203, 0.1); /* Un fondo sutil para resaltar */
+  padding: 1px 3px;
+  border-radius: 4px;
+}
+
+/* Ajustamos el padding de la celda para que se vea bien */
+.detail-row .file-name-cell {
+  padding-left: 45px; /* Indentación para mostrar anidación */
+  white-space: normal; /* Permite que el texto del contexto se ajuste */
+  vertical-align: top; /* Alinea el icono de archivo con la parte superior */
+}
